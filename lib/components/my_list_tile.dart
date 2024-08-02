@@ -16,7 +16,9 @@ class MyListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Slidable(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 5),
+      child: Slidable(
         endActionPane: ActionPane(
           motion: const StretchMotion(),
           children: [
@@ -29,7 +31,9 @@ class MyListTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             //   delete option
-            const SizedBox(width: 5,),
+            const SizedBox(
+              width: 5,
+            ),
             SlidableAction(
               onPressed: onDeletePressed,
               icon: Icons.delete,
@@ -37,10 +41,17 @@ class MyListTile extends StatelessWidget {
               foregroundColor: Colors.white,
               borderRadius: BorderRadius.circular(4),
             ),
-            const SizedBox(width: 5,),
-
+            const SizedBox(
+              width: 5,
+            ),
           ],
         ),
-        child: ListTile(title: Text(title), trailing: Text(trailing)));
+        child: Container(
+            decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8)),
+            child: ListTile(title: Text(title), trailing: Text(trailing))),
+      ),
+    );
   }
 }

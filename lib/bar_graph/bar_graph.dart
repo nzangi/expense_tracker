@@ -17,6 +17,13 @@ class _MyBarGraphState extends State<MyBarGraph> {
   // list to hold data for each category
   List<IndividualBar> barData = [];
 
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) => scrollToEnd);
+  }
+
   // initialize bar data
   void initializeData() {
     barData = List.generate(widget.monthlySalary.length,
@@ -25,19 +32,27 @@ class _MyBarGraphState extends State<MyBarGraph> {
 
   // calculate the max limit
 
-  double calculateMax(){
-  //   set maximum to 500
+  double calculateMax() {
+    //   set maximum to 500
     double max = 500;
 
-  //   get the highest month
+    //   get the highest month
     widget.monthlySalary.sort();
 
-  //   increase the upper limit
+    //   increase the upper limit
     max = widget.monthlySalary.last * 1.05;
-    if(max < 500){
+    if (max < 500) {
       return 500;
     }
     return max;
+  }
+
+  // scroll to the end of the current month
+  final ScrollController _scrollController = ScrollController();
+
+  void scrollToEnd() {
+    _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+        duration: const Duration(seconds: 1), curve: Curves.fastOutSlowIn);
   }
 
   @override
@@ -49,11 +64,12 @@ class _MyBarGraphState extends State<MyBarGraph> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      controller: _scrollController,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 25.0),
         child: SizedBox(
-          width:
-              barWidth * barData.length + spaceBetweenBars * (barData.length - 1),
+          width: barWidth * barData.length +
+              spaceBetweenBars * (barData.length - 1),
           child: BarChart(BarChartData(
             minY: 0,
             maxY: calculateMax(),
@@ -63,7 +79,8 @@ class _MyBarGraphState extends State<MyBarGraph> {
               show: true,
               topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
               leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
               bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                 showTitles: true,
@@ -74,19 +91,18 @@ class _MyBarGraphState extends State<MyBarGraph> {
             barGroups: barData
                 .map((data) => BarChartGroupData(x: data.x, barRods: [
                       BarChartRodData(
-                        toY: data.y,
-                        width: barWidth,
-                        borderRadius: BorderRadius.circular(4),
-                        color: Colors.grey.shade800,
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,toY: calculateMax(),color: Colors.white
-                        )
-                      ),
+                          toY: data.y,
+                          width: barWidth,
+                          borderRadius: BorderRadius.circular(4),
+                          color: Colors.grey.shade800,
+                          backDrawRodData: BackgroundBarChartRodData(
+                              show: true,
+                              toY: calculateMax(),
+                              color: Colors.white)),
                     ]))
                 .toList(),
             alignment: BarChartAlignment.center,
             groupsSpace: spaceBetweenBars,
-
           )),
         ),
       ),

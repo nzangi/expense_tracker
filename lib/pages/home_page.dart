@@ -20,7 +20,8 @@ class _HomePageState extends State<HomePage> {
   // text controllers
   TextEditingController nameController = TextEditingController();
   TextEditingController amountController = TextEditingController();
-  Future<Map<int, double>>? _monthlyTotalsFeature;
+  Future<Map<String, double>>? _monthlyTotalsFeature;
+  Future<double>? _calculateCurrentMonthTotal;
 
   @override
   void initState() {
@@ -28,14 +29,18 @@ class _HomePageState extends State<HomePage> {
     Provider.of<ExpenseDatabase>(context, listen: false).readExpenses();
 
     //  futures loading
-    refreshGraphData();
+    refreshData();
     super.initState();
   }
 
   // refresh graph data
-  void refreshGraphData() {
+  void refreshData() {
     _monthlyTotalsFeature = Provider.of<ExpenseDatabase>(context, listen: false)
         .calculateMonthlyTotalCosts();
+
+    _calculateCurrentMonthTotal =
+        Provider.of<ExpenseDatabase>(context, listen: false)
+            .calculateMonthlyTotals();
   }
 
   @override
@@ -52,6 +57,10 @@ class _HomePageState extends State<HomePage> {
           calculateMonthCount(startYear, startMonth, currentYear, currentMonth);
 
       //only display expense for the current month
+      List<Expense> currentMonthExpense = value.allExpenses.where((expense) {
+        return expense.date.year == currentYear &&
+            expense.date.month == currentMonth;
+      }).toList();
 
       //return UI
       return Scaffold(
@@ -59,6 +68,25 @@ class _HomePageState extends State<HomePage> {
           floatingActionButton: FloatingActionButton(
             onPressed: openExpenseBox,
             child: const Icon(Icons.add),
+          ),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            title: FutureBuilder<double>(
+                future: _calculateCurrentMonthTotal,
+                builder: (context, snapshot) {
+                  //   loaded
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                            '${getCurrentMonthName()} Expenses : KSH ${snapshot.data!.toStringAsFixed(2)}'),
+                      ],
+                    );
+                  } else {
+                    return const Text('Loading ...');
+                  }
+                }),
           ),
           body: SafeArea(
             child: Column(
@@ -70,12 +98,22 @@ class _HomePageState extends State<HomePage> {
                       future: _monthlyTotalsFeature,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.done) {
-                          final monthlyTotals = snapshot.data ?? {};
-                          //   create a list of summary
-                          List<double> monthlySalary = List.generate(
-                              monthCount,
-                              (index) =>
-                                  monthlyTotals[startMonth + index] ?? 0.0);
+                          Map<String, double> monthlyTotals =
+                              snapshot.data ?? {};
+                          //   create a month - year of summary
+                          List<double> monthlySalary =
+                              List.generate(monthCount, (index) {
+                            //     calculate mont - year
+                            int year =
+                                startYear + (startYear + index - 1) ~/ 12;
+                            int month = (startMonth + index - 1) % 12 + 1;
+
+                            //   create the key in the format 'year-month'
+                            String yearMonthKey = '$year-$month';
+                            //   return total year-month 0.0 if non existence
+
+                            return monthlyTotals[yearMonthKey] ?? 0.0;
+                          });
 
                           return MyBarGraph(
                               monthlySalary: monthlySalary,
@@ -91,10 +129,14 @@ class _HomePageState extends State<HomePage> {
                 // list builder
                 Expanded(
                   child: ListView.builder(
-                      itemCount: value.allExpenses.length,
+                      itemCount: currentMonthExpense.length,
                       itemBuilder: (context, index) {
+                        // reverse the index to show the latest first
+                        int reverseIndex =
+                            currentMonthExpense.length - 1 - index;
                         // get individual expense
-                        Expense individualExpense = value.allExpenses[index];
+                        Expense individualExpense =
+                            currentMonthExpense[reverseIndex];
                         return MyListTile(
                           title: individualExpense.name,
                           trailing: formatAmount(individualExpense.amount),
@@ -222,7 +264,7 @@ class _HomePageState extends State<HomePage> {
           //   save to db
           await context.read<ExpenseDatabase>().createExpense(newExpense);
 
-          refreshGraphData();
+          refreshData();
           //   clear controllers
           nameController.clear();
           amountController.clear();
@@ -258,7 +300,7 @@ class _HomePageState extends State<HomePage> {
               .read<ExpenseDatabase>()
               .updateExpense(existingId, updatedExpense);
         }
-        refreshGraphData();
+        refreshData();
       },
       child: const Text('Update'),
     );
@@ -271,7 +313,7 @@ class _HomePageState extends State<HomePage> {
         Navigator.pop(context);
         //   delete from expense db
         await context.read<ExpenseDatabase>().deleteExpense(id);
-        refreshGraphData();
+        refreshData();
       },
       child: const Text('Delete'),
     );

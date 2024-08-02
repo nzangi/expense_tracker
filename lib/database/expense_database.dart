@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -72,51 +74,70 @@ class ExpenseDatabase extends ChangeNotifier {
    */
 
   //   calculate total expenses for each month
-  Future<Map<int, double>> calculateMonthlyTotalCosts() async {
+  Future<Map<String, double>> calculateMonthlyTotalCosts() async {
     //   read all expenses from db
     await readExpenses();
     //create a mpa to keep a track of each month
-    Map<int, double> monthlyTotals = {};
+    Map<String, double> monthlyTotals = {};
 
     //   illiterate over all expenses
     for (var expense in _allExpenses) {
-      //   extract date and month from each expense
-      int month = expense.date.month;
+      //   extract year and month from each expense
+      // int month = expense.date.month;
+      String yearMonth = '${expense.date.year}-${expense.date.year}';
+
       //   check if the map is in the map, internalize it to zero
-      if (!monthlyTotals.containsKey(month)) {
-        monthlyTotals[month] = 0;
+      if (!monthlyTotals.containsKey(yearMonth)) {
+        monthlyTotals[yearMonth] = 0;
       }
 
       //    add all month's expense to that month
-      monthlyTotals[month] = monthlyTotals[month]! + expense.amount;
+      monthlyTotals[yearMonth] = monthlyTotals[yearMonth]! + expense.amount;
     }
     return monthlyTotals;
   }
 
-//   get start year
-  int getStartMonth(){
-    if(_allExpenses.isEmpty){
+  // calculate total for each month
+  Future<double> calculateMonthlyTotals() async {
+    //   fetch expense from database
+    await readExpenses();
+    //   get current month year
+    int currentMonth = DateTime.now().month;
+    int currentYear = DateTime.now().year;
+
+    //  filter the expense to include those for this month year
+    List<Expense> currentMonthExpenses = _allExpenses.where((expense) {
+      return expense.date.month == currentMonth &&
+          expense.date.year == currentYear;
+    }).toList();
+
+    //   calculate total amount for the current month
+    double total =
+        currentMonthExpenses.fold(0, (sum, expense) => sum + expense.amount);
+
+    return total;
+  }
+
+  //   get start year
+  int getStartMonth() {
+    if (_allExpenses.isEmpty) {
       return DateTime.now()
           .month; // default current month if no expense recorded
     }
 
     // get all the expense to get the earliest
-    _allExpenses.sort(
-        (a,b) => a.date.compareTo(b.date)
-    );
+    _allExpenses.sort((a, b) => a.date.compareTo(b.date));
     return _allExpenses.first.date.month;
   }
 
-  int getYearMonth(){
-    if(_allExpenses.isEmpty){
+  int getYearMonth() {
+    if (_allExpenses.isEmpty) {
       return DateTime.now()
           .year; // default current month if no expense recorded
     }
     // get all the expense to get the earliest
 
-    _allExpenses.sort(
-            (a,b) => a.date.compareTo(b.date)
-    );
+    _allExpenses.sort((a, b) => a.date.compareTo(b.date));
     return _allExpenses.first.date.year;
   }
 }
